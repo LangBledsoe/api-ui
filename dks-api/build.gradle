@@ -1,0 +1,180 @@
+plugins {
+    id 'org.springframework.boot' version '3.4.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+
+    // TODO: Review the following plugins
+    id 'com.github.johnrengelman.processes' version "0.5.0"
+    id 'org.springdoc.openapi-gradle-plugin' version "1.9.0"
+    id 'org.asciidoctor.jvm.convert' version "2.4.0"
+    id "io.gatling.gradle" version "3.13.5.1"
+}
+
+group = 'com.liatrio'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+    all {
+        exclude group: 'javax.servlet', module: 'javax.servlet-api'
+    }
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    contractTestImplementation.extendsFrom(testImplementation)
+    contractTestRuntimeOnly.extendsFrom(testRuntimeOnly)
+}
+
+sourceSets {
+	gatling {
+		java.srcDirs = ["src/performanceTest/java"]
+		resources.srcDirs = ["src/performanceTest/resources"]
+	}
+	contractTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+
+		java {
+		}
+	}
+	functionalTest {
+		java {
+			java.srcDirs=["src/functionalTest/java"]
+		}
+	}
+}
+
+allprojects {
+    tasks.withType(Test).tap {
+        configureEach {
+            testLogging {
+                // set options for log level LIFECYCLE
+                events "passed", "skipped", "failed"
+                exceptionFormat "full"
+                showExceptions true
+                showCauses true
+                showStackTraces true
+
+                // set options for log level DEBUG and INFO
+                debug {
+                    events "passed", "skipped", "failed", "started", "standardOut", "standardError"
+                    exceptionFormat "full"
+                }
+                info.events = debug.events
+                info.exceptionFormat = debug.exceptionFormat
+
+                afterSuite { desc, result ->
+                    if (!desc.parent) { // will match the outermost suite
+                        def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                        def startItem = '|  ', endItem = '  |'
+                        def repeatLength = startItem.length() + output.length() + endItem.length()
+                        println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+                    }
+                }
+            }
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    systemProperties = System.properties
+    set('snippetsDir', file("build/generated-snippets"))
+}
+
+dependencies {
+
+    implementation 'org.springframework.boot:spring-boot-starter-web:3.4.4'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.4.4'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator:3.4.4'
+    implementation 'org.springframework.boot:spring-boot-starter-security:3.4.4'
+    implementation 'org.springframework.security:spring-security-config:6.4.4'
+    implementation 'org.springframework.security:spring-security-web:6.4.4'
+    implementation 'org.springframework.security:spring-security-core:6.4.4'
+    implementation 'org.springframework.data:spring-data-rest-core:3.7.18'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+    implementation 'io.github.cdimascio:java-dotenv:5.2.2'
+    implementation 'jakarta.persistence:jakarta.persistence-api:3.2.0'
+    implementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+    implementation 'org.hibernate.orm:hibernate-core:6.1.0.Final'
+
+    testImplementation 'com.h2database:h2:2.3.232'      //used for test to keep in memory h2 database
+    implementation 'com.h2database:h2:2.3.232'          //used for bootRun to keep in memory h2 database
+    implementation 'org.postgresql:postgresql:42.7.5'  //used for production profile to allow for data persistence
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.4.4'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security:3.4.4'
+    testImplementation 'org.springframework.security:spring-security-test:6.4.4'
+    testImplementation 'org.springframework.security:spring-security-config:6.4.4'
+    testImplementation 'org.springframework.security:spring-security-web:6.4.4'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
+    testImplementation 'org.junit.platform:junit-platform-launcher:1.11.4'
+
+    contractTestImplementation 'org.jetbrains.kotlin:kotlin-stdlib:2.1.20'
+    contractTestImplementation 'au.com.dius.pact.provider:junit5:4.6.17'
+
+    functionalTestImplementation 'org.springframework.boot:spring-boot-starter-test:3.4.4'
+    functionalTestImplementation 'org.springframework.security:spring-security-test:6.4.4'
+    functionalTestImplementation 'io.rest-assured:spring-mock-mvc:4.5.1'
+    functionalTestImplementation 'com.fasterxml.jackson.core:jackson-databind:2.18.3'
+
+    implementation 'org.scala-sbt:zinc_2.12:1.10.8'
+}
+
+springBoot {
+  mainClass = 'com.liatrio.dojo.devopsknowledgeshareapi.Application'
+}
+
+bootJar {
+   archiveFileName = 'devops-knowledge-share-api.jar'
+}
+
+bootRun {
+    systemProperties = System.properties
+    systemProperty "spring.profiles.active", "local"
+}
+
+test {
+    systemProperty "spring.profiles.active", "local"
+    outputs.dir snippetsDir
+    useJUnitPlatform()
+}
+
+task contractTest(type: Test) {
+	description = "Run contract tests"
+	group = "verification"
+
+	testClassesDirs = sourceSets.contractTest.output.classesDirs
+	classpath = sourceSets.contractTest.runtimeClasspath
+
+	useJUnitPlatform()
+
+	systemProperty "spring.profiles.active", "local"
+	systemProperty "pact.provider.version", System.env.PACT_PROVIDER_VERSION ?: "0.0.0"
+	systemProperty 'pactbroker.host', System.env.PACT_BROKER_URL ?: "localhost"
+	systemProperty 'pactbroker.port', System.env.PACT_BROKER_PORT ?: "9292"
+	systemProperty 'pactbroker.scheme', System.env.PACT_BROKER_SCHEME ?: 'http'
+	systemProperty 'pactbroker.auth.username', System.env.PACT_BROKER_USERNAME ?: ""
+	systemProperty 'pactbroker.auth.password', System.env.PACT_BROKER_PASSWORD ?: ""
+	systemProperty 'pact.verifier.publishResults', true
+}
+
+
+task functionalTest(type: Test) {
+	description = "Run functional tests"
+	group = "verification"
+
+	testClassesDirs = sourceSets.functionalTest.output.classesDirs
+	classpath = sourceSets.functionalTest.runtimeClasspath
+
+	useJUnitPlatform()
+
+	systemProperties = System.properties
+}

@@ -1,0 +1,38 @@
+{
+  "branches": ["main"],
+  "repositoryUrl": "https://github.com/liatrio/dks-api.git",
+  "tagFormat": "v${version}",
+  "preset": "conventionalcommits",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "successComment": false,
+        "failComment": false,
+        "failTitle": false
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "publishCmd": "echo version=${nextRelease.version} >> $GITHUB_OUTPUT"
+      }
+    ]
+  ]
+}

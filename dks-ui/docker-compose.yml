@@ -1,0 +1,81 @@
+services:
+  dks-ui:
+    image: ${APP_NAME_UI}:${SHA_TAG:-localdev}
+    container_name: ${APP_NAME_UI}
+    ports:
+      - ${APP_PORT_UI}:3000
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DKS_API_BASE_URL=${DKS_API_BASE_URL}
+      - ENABLE_IMAGE_URL=${ENABLE_IMAGE_URL}
+    networks:
+      - frontend
+  ks-api:
+    image: ${APP_NAME}:${SHA_TAG:-localdev}
+    container_name: ${APP_NAME}
+    hostname: ${APP_HOSTNAME}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - JAVA_ENABLE_DEBUG=${JAVA_ENABLE_DEBUG}
+      - JAVA_DEBUG_PORT=${JAVA_DEBUG_PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_ROLE_NAME=${DB_ROLE_NAME}
+      - DB_ROLE_PASSWORD=${DB_ROLE_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - PGPORT=${PGPORT:-5432}
+    ports:
+      - '${APP_PORT}:8080'
+      - '${JAVA_DEBUG_PORT}:${JAVA_DEBUG_PORT}'
+    healthcheck:
+      test:
+        ['CMD', 'curl', '-f', 'http://localhost:${APP_PORT}/actuator/health']
+      start_period: 20s
+      interval: 30s
+      retries: 3
+      timeout: 10s
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - dks-db
+  dks-db:
+    image: postgres:16.8-alpine@sha256:3b057e1c2c6dfee60a30950096f3fab33be141dbb0fdd7af3d477083de94166c
+    container_name: ${DB_HOST}
+    hostname: ${DB_HOST}
+    environment:
+      - PGPORT=${PGPORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_ROLE_NAME=${DB_ROLE_NAME}
+      - DB_ROLE_PASSWORD=${DB_ROLE_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    ports:
+      - 5432:${PGPORT:-5432}
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER}']
+      start_period: 30s
+      interval: 20s
+      retries: 3
+      timeout: 10s
+    volumes:
+      - dks-db-datastore:/var/lib/postgresql/data
+      - ./db-resources/0_0_db.sh:/docker-entrypoint-initdb.d/0_0_db.sh
+    networks:
+      - backend
+
+volumes:
+  dks-db-datastore:
+    name: dks-db-datastore
+
+networks:
+  frontend:
+    name: frontend
+  backend:
+    name: backend
+
+
