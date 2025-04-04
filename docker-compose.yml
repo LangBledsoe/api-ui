@@ -1,6 +1,6 @@
 services:
   dks-ui:
-    image: ${APP_NAME_UI}:${SHA_TAG:-localdev}
+    image: ${APP_NAME_UI}:${SHA_TAG:-latest}
     container_name: ${APP_NAME_UI}
     ports:
       - ${APP_PORT_UI}:3000
@@ -13,7 +13,7 @@ services:
     networks:
       - frontend
   dks-api:
-    image: ${APP_NAME}:${SHA_TAG:-localdev}
+    image: ${APP_NAME}:${SHA_TAG:-latest}
     container_name: ${APP_NAME}
     hostname: ${APP_HOSTNAME}
     build:
