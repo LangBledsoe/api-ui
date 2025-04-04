@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push-image:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     permissions:
       packages: write
     steps:
