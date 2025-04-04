@@ -14,6 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+
+      - name: Build JAR
+        run: ./gradlew bootJar
+
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -23,7 +31,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-         docker compose up -d
+         docker compose build
          docker tag dks-api:latest ghcr.io/langbledsoe/dks-api:latest
          docker tag dks-ui:latest ghcr.io/langbledsoe/dks-ui:latest
          docker push ghcr.io/langbledsoe/dks-api:latest
